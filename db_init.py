@@ -3,6 +3,7 @@
 # Переговоры (Код переговоров, Код абонента, Код города, Дата, Количество минут, Время суток).
 import sqlite3
 from random import randint, shuffle, choice
+import os
 
 city_count = 100
 caller_count = 1_000
@@ -11,6 +12,8 @@ conversation_count = 10_000
 with open('cities.txt', encoding='utf-8') as file:
     cities = list(map(str.strip, file.readlines()))
 shuffle(cities)
+
+os.remove('data.db')
 
 connection = sqlite3.connect('data.db')
 cursor = connection.cursor()
@@ -46,7 +49,7 @@ commands = [
     f'''INSERT INTO callers(phone_number, tin, address) VALUES
         {','.join(f'("89{randint(10 ** 8, 10 ** 9 - 1):09}", '
                   f'"{randint(10 ** 11, 10 ** 12 - 1):012}",'
-                  f'"г. {choice(cities)}")' for _ in range(caller_count))}
+                  f'"{choice(cities)}")' for _ in range(caller_count))}
     ''',
     '''DELETE FROM cities
     ''',
@@ -57,7 +60,7 @@ commands = [
     ''',
     f'''INSERT INTO conversations (caller_id, city_id, date, minute_number, time) VALUES
         {','.join(f'({randint(1, caller_count)}, {randint(1, city_count)},'
-                  f'"{randint(2000, 2024)}.{randint(1, 12):02}.{randint(1, 28):02}",'
+                  f'"{randint(1, 12):02}.{randint(1, 28):02}.{randint(2000, 2024)}",'
                   f'{randint(1, 3 * 60)}, "{randint(0, 23):02}:{randint(0, 59):02}")'
                   for _ in range(conversation_count))}
     ''',

@@ -1,6 +1,7 @@
 import sys
 import sqlite3
 from PyQt5 import uic
+from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QWidget, QDialog, QCheckBox
 
 
@@ -20,6 +21,8 @@ class MainWindow(QMainWindow):
         self.tab_widget.currentChanged.connect(self.current_tab_changed)
 
         self.tables = [self.table_callers, self.table_cities, self.table_conversations]
+        for table in self.tables:
+            table.itemChanged.connect(self.check_table_value)
         self.current_table = self.table_callers
         self.file_saved = True
         self.file_created = False
@@ -45,6 +48,9 @@ class MainWindow(QMainWindow):
         if not filename:
             return
 
+        for table in self.tables:
+            table.itemChanged.disconnect(self.check_table_value)
+
         *_, caption = filename.split('/')
         self.setWindowTitle(f'Учёт телефонных переговоров - {caption}')
 
@@ -66,6 +72,9 @@ class MainWindow(QMainWindow):
         data_conversations.insert(0, (
             'Код переговоров', 'Код абонента', 'Код города', 'Дата', 'Количество минут', 'Время суток'))
         self.fill_table_with_data(self.table_conversations, data_conversations)
+
+        for table in self.tables:
+            table.itemChanged.connect(self.check_table_value)
 
     def action_on_save(self):
         filename, _ = QFileDialog.getSaveFileName(self, 'Сохранить', '', 'Базы данных (*.db)')
@@ -164,6 +173,47 @@ class MainWindow(QMainWindow):
         table.resizeColumnsToContents()
         table.resizeRowToContents(0)
 
+    def check_table_value(self, item):
+        white = 0xFFFFFF
+        red = 0xFFC7CE
+        text = item.text()
+        col = item.columnt()
+        if self.sender() is self.table_callers:
+            digit_count = {
+                0: None,
+                1: 11,
+                2: 12,
+            }
+            if col in digit_count.keys() and not check_int(text, digit_count.get(col)):
+                item.setBackground(QBrush(QColor(red)))
+            else:
+                item.setBackground(QBrush(QColor(white)))
+        elif self.sender() is self.table_cities:
+            digit_count = {
+                0: None,
+                2: None,
+                3: None,
+            }
+            if col in digit_count.keys() and not check_int(text, digit_count.get(col)):
+                item.setBackground(QBrush(QColor(red)))
+            else:
+                item.setBackground(QBrush(QColor(white)))
+        elif self.sender() is self.table_conversations:
+            digit_count = {
+                0: None,
+                1: None,
+                2: None,
+                4: None,
+            }
+            date_columns = (3,)
+            time_columns = (5,)
+            if col in digit_count.keys() and not check_int(text, digit_count.get(col)) or \
+                    col in date_columns and not check_date(text) or \
+                    col in time_columns and not check_time(text):
+                item.setBackground(QBrush(QColor(red)))
+            else:
+                item.setBackground(QBrush(QColor(white)))
+
 
 class Header(QWidget):
     def __init__(self, parent, name, table, col):
@@ -232,6 +282,20 @@ class FilterDialog(QDialog):
             else:
                 check_box.hide()
                 check_box.setChecked(False)
+
+
+def check_int(s, digit_count=None):
+    if digit_count is None:
+        return s.isdigit()
+    return len(s) == digit_count and s.isdigit()
+
+
+def check_time(s):
+    return len(s) == 5 and s[2:3] == ':' and s[:2].isdigit() and s[3:].isdigit()
+
+
+def check_date(s):
+    return len(s) == 10 and s[2:3] == '.' and s[5:6] == '.' and s[:2].isdigit() and s[3:5].isdigit() and s[6:].isdigit()
 
 
 def except_hook(cls, exception, traceback):
