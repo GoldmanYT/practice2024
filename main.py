@@ -1,7 +1,7 @@
 import sys
 import sqlite3
+from consts import *
 from PyQt5 import uic
-from PyQt5.QtGui import QBrush, QColor
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QWidget, QDialog, QCheckBox
 
 
@@ -174,31 +174,30 @@ class MainWindow(QMainWindow):
         table.resizeRowToContents(0)
 
     def check_table_value(self, item):
-        white = 0xFFFFFF
-        red = 0xFFC7CE
         text = item.text()
-        col = item.columnt()
-        if self.sender() is self.table_callers:
+        col = item.column()
+        table = self.sender()
+        if table is self.table_callers:
             digit_count = {
                 0: None,
                 1: 11,
                 2: 12,
             }
             if col in digit_count.keys() and not check_int(text, digit_count.get(col)):
-                item.setBackground(QBrush(QColor(red)))
+                item.setBackground(red)
             else:
-                item.setBackground(QBrush(QColor(white)))
-        elif self.sender() is self.table_cities:
+                item.setBackground(white)
+        elif table is self.table_cities:
             digit_count = {
                 0: None,
                 2: None,
                 3: None,
             }
             if col in digit_count.keys() and not check_int(text, digit_count.get(col)):
-                item.setBackground(QBrush(QColor(red)))
+                item.setBackground(red)
             else:
-                item.setBackground(QBrush(QColor(white)))
-        elif self.sender() is self.table_conversations:
+                item.setBackground(white)
+        elif table is self.table_conversations:
             digit_count = {
                 0: None,
                 1: None,
@@ -210,9 +209,9 @@ class MainWindow(QMainWindow):
             if col in digit_count.keys() and not check_int(text, digit_count.get(col)) or \
                     col in date_columns and not check_date(text) or \
                     col in time_columns and not check_time(text):
-                item.setBackground(QBrush(QColor(red)))
+                item.setBackground(red)
             else:
-                item.setBackground(QBrush(QColor(white)))
+                item.setBackground(white)
 
 
 class Header(QWidget):
