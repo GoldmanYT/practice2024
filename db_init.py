@@ -13,7 +13,10 @@ with open('cities.txt', encoding='utf-8') as file:
     cities = list(map(str.strip, file.readlines()))
 shuffle(cities)
 
-os.remove('data.db')
+try:
+    os.remove('data.db')
+except FileNotFoundError:
+    pass
 
 connection = sqlite3.connect('data.db')
 cursor = connection.cursor()
@@ -44,26 +47,6 @@ commands = [
         FOREIGN KEY (city_id) REFERENCES callers(city_id)
     )
     ''',
-    '''DELETE FROM callers
-    ''',
-    f'''INSERT INTO callers(phone_number, tin, address) VALUES
-        {','.join(f'("89{randint(10 ** 8, 10 ** 9 - 1):09}", '
-                  f'"{randint(10 ** 11, 10 ** 12 - 1):012}",'
-                  f'"{choice(cities)}")' for _ in range(caller_count))}
-    ''',
-    '''DELETE FROM cities
-    ''',
-    f'''INSERT INTO cities(name, day_rate, night_rate) VALUES
-        {','.join(f'("{city}", {randint(1, 20)}, {randint(1, 20)})' for city in cities)}
-    ''',
-    '''DELETE FROM conversations
-    ''',
-    f'''INSERT INTO conversations (caller_id, city_id, date, minute_number, time) VALUES
-        {','.join(f'({randint(1, caller_count)}, {randint(1, city_count)},'
-                  f'"{randint(1, 12):02}.{randint(1, 28):02}.{randint(2000, 2024)}",'
-                  f'{randint(1, 3 * 60)}, "{randint(0, 23):02}:{randint(0, 59):02}")'
-                  for _ in range(conversation_count))}
-    ''',
 ]
 for command in commands:
     try:
@@ -71,6 +54,33 @@ for command in commands:
     except sqlite3.OperationalError as error:
         print(error)
         print(command)
+commands = [
+    f'''INSERT INTO callers(phone_number, tin, address)
+    VALUES (?, ?, ?)
+    ''',
+    f'''INSERT INTO cities(name, day_rate, night_rate)
+    VALUES (?, ?, ?)
+    ''',
+    f'''INSERT INTO conversations (caller_id, city_id, date, minute_number, time)
+    VALUES (?, ?, ?, ?, ?)
+    ''',
+]
+datas = [
+    [['89' + ''.join(str(randint(0, 9)) for _ in range(9)),
+      ''.join(str(randint(0, 9)) for _ in range(12)),
+      choice(cities)]
+     for _ in range(caller_count)],
+    [[city, randint(1, 20), randint(1, 20)]
+     for city in cities],
+    [[randint(1, caller_count),
+      randint(1, city_count),
+      f'{randint(1, 28):02}.{randint(1, 12):02}.{randint(2000, 2024)}',
+      randint(1, 3 * 60),
+      f'{randint(0, 23):02}:{randint(0, 59):02}']
+     for _ in range(conversation_count)],
+]
+for command, data in zip(commands, datas):
+    cursor.executemany(command, data)
 
 connection.commit()
 connection.close()

@@ -16,27 +16,14 @@
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
     <widget class="QLabel" name="header_name">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
      <property name="text">
       <string>Header</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QToolButton" name="tool_button">
-     <property name="minimumSize">
-      <size>
-       <width>23</width>
-       <height>23</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>23</width>
-       <height>23</height>
-      </size>
-     </property>
-     <property name="arrowType">
-      <enum>Qt::DownArrow</enum>
      </property>
     </widget>
    </item>
