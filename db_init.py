@@ -2,7 +2,7 @@
 # Города (Код города, Название, Тариф дневной, Тариф ночной).
 # Переговоры (Код переговоров, Код абонента, Код города, Дата, Количество минут, Время суток).
 import sqlite3
-from random import randint, shuffle, choice
+from random import randint, choice
 import os
 
 city_count = 100
@@ -10,8 +10,7 @@ caller_count = 1_000
 conversation_count = 10_000
 
 with open('cities.txt', encoding='utf-8') as file:
-    cities = list(map(str.strip, file.readlines()))
-shuffle(cities)
+    cities = sorted(map(str.strip, file.readlines()))
 
 try:
     os.remove('data.db')
@@ -67,7 +66,7 @@ commands = [
 ]
 datas = [
     [['89' + ''.join(str(randint(0, 9)) for _ in range(9)),
-      ''.join(str(randint(0, 9)) for _ in range(12)),
+      str(randint(1, 9)) + ''.join(str(randint(0, 9)) for _ in range(11)),
       choice(cities)]
      for _ in range(caller_count)],
     [[city, randint(1, 20), randint(1, 20)]

@@ -150,6 +150,8 @@
     <addaction name="action_insert"/>
     <addaction name="action_add"/>
     <addaction name="action_delete"/>
+    <addaction name="separator"/>
+    <addaction name="action_search"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
@@ -192,6 +194,11 @@
   <action name="action_delete">
    <property name="text">
     <string>Удалить строку</string>
+   </property>
+  </action>
+  <action name="action_search">
+   <property name="text">
+    <string>Искать в таблице</string>
    </property>
   </action>
  </widget>
