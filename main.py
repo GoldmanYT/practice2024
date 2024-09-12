@@ -1,7 +1,6 @@
 import sys
 import sqlite3
 from consts import *
-from PyQt5 import uic
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QWidget, QMessageBox, QDialog
 from fnmatch import fnmatch
@@ -10,10 +9,10 @@ from main_window import Ui_MainWindow as MainWindowUi
 from search_window import Ui_Dialog as SearchWindowUi
 
 
-class MainWindow(QMainWindow, MainWindowUi):
+class MainWindow(MainWindowUi, QMainWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi('main.ui', self)
+        self.setupUi(self)
         self.setWindowIcon(QIcon('icon.ico'))
 
         self.action_new.triggered.connect(self.action_on_new)
@@ -300,7 +299,7 @@ class MainWindow(QMainWindow, MainWindowUi):
 class Header(QWidget, HeaderUi):
     def __init__(self, parent, name):
         super().__init__(parent)
-        uic.loadUi('header.ui', self)
+        self.setupUi(self)
 
         self.header_name.setText(name)
 
@@ -308,7 +307,7 @@ class Header(QWidget, HeaderUi):
 class SearchDialog(QDialog, SearchWindowUi):
     def __init__(self, parent, table):
         super().__init__(parent)
-        uic.loadUi('search.ui', self)
+        self.setupUi(self)
 
         data = [get_table_headers(table)] + get_table_data(table)
         fill_table_with_data(self, self.table, data)
