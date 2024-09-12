@@ -18,7 +18,7 @@ class Ui_Dialog(object):
         self.verticalLayout = QtWidgets.QVBoxLayout(Dialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.search = QtWidgets.QTableWidget(Dialog)
-        self.search.setMaximumSize(QtCore.QSize(16777215, 50))
+        self.search.setMaximumSize(QtCore.QSize(16777215, 30))
         self.search.setRowCount(1)
         self.search.setObjectName("search")
         self.search.setColumnCount(0)
