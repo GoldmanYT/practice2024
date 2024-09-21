@@ -1,10 +1,9 @@
 import sys
 import sqlite3
 from consts import *
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QWidget, QMessageBox, QDialog
-from fnmatch import fnmatch
-from header import Ui_Form as HeaderUi
+from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QDialog
 from main_window import Ui_MainWindow as MainWindowUi
 from search_window import Ui_Dialog as SearchWindowUi
 
@@ -27,9 +26,8 @@ class MainWindow(MainWindowUi, QMainWindow):
         self.tab_widget.currentChanged.connect(self.current_tab_changed)
 
         self.tables = [self.table_callers, self.table_cities, self.table_conversations]
-        for table in self.tables:
+        for i, table in enumerate(self.tables):
             table.itemChanged.connect(self.check_table_value)
-            table.itemChanged.connect(table.resizeColumnsToContents)
         self.current_table = self.table_callers
         self.file_saved = True
         self.file_created = False
@@ -37,9 +35,9 @@ class MainWindow(MainWindowUi, QMainWindow):
         self.action_on_new()
 
     def action_on_new(self):
-        fill_table_with_data(self, self.table_callers, [HEADERS_CALLERS])
-        fill_table_with_data(self, self.table_cities, [HEADERS_CITIES])
-        fill_table_with_data(self, self.table_conversations, [HEADERS_CONVERSATIONS])
+        fill_table_with_data(self.table_callers, [HEADERS_CALLERS])
+        fill_table_with_data(self.table_cities, [HEADERS_CITIES])
+        fill_table_with_data(self.table_conversations, [HEADERS_CONVERSATIONS])
 
         caption = 'Без имени.db'
         self.setWindowTitle(f'Учёт телефонных переговоров - {caption}')
@@ -51,7 +49,6 @@ class MainWindow(MainWindowUi, QMainWindow):
 
         for table in self.tables:
             table.itemChanged.disconnect(self.check_table_value)
-            table.itemChanged.disconnect(table.resizeColumnsToContents)
 
         *_, caption = filename.split('/')
         self.setWindowTitle(f'Учёт телефонных переговоров - {caption}')
@@ -66,17 +63,16 @@ class MainWindow(MainWindowUi, QMainWindow):
         connection.close()
 
         data_callers.insert(0, HEADERS_CALLERS)
-        fill_table_with_data(self, self.table_callers, data_callers)
+        fill_table_with_data(self.table_callers, data_callers)
 
         data_cities.insert(0, HEADERS_CITIES)
-        fill_table_with_data(self, self.table_cities, data_cities)
+        fill_table_with_data(self.table_cities, data_cities)
 
         data_conversations.insert(0, HEADERS_CONVERSATIONS)
-        fill_table_with_data(self, self.table_conversations, data_conversations)
+        fill_table_with_data(self.table_conversations, data_conversations)
 
         for table in self.tables:
             table.itemChanged.connect(self.check_table_value)
-            table.itemChanged.connect(table.resizeColumnsToContents)
 
     def action_on_save(self):
         filename, _ = QFileDialog.getSaveFileName(self, 'Сохранить', '', 'Базы данных (*.db)')
@@ -164,53 +160,77 @@ class MainWindow(MainWindowUi, QMainWindow):
         message_box.exec_()
 
     def check_for_errors(self):
+        def update_first_incorrect_cell(table_i, cell_row, cell_col):
+            nonlocal first_incorrect_cell
+            if first_incorrect_cell == (-1, -1, -1):
+                first_incorrect_cell = table_i, cell_row, cell_col
+
         status = DATA_CORRECT
-        for table in self.tables:
+        first_incorrect_cell = -1, -1, -1
+        for i, table in enumerate(self.tables):
             table.itemChanged.disconnect(self.check_table_value)
-            table.itemChanged.disconnect(table.resizeColumnsToContents)
             for row in range(1, table.rowCount()):
                 for col in range(table.columnCount()):
-                    if not self.check_table_value(table.item(row, col), table, do_reconnect=False):
+                    if not self.check_table_value(table.item(row, col), table, do_reconnect=False,
+                                                  check_unique=False, check_foreign_key=False):
                         status = DATA_FORMAT_ERROR
+                        update_first_incorrect_cell(i, row, col)
 
-        for table in self.tables:
+        for i, table in enumerate(self.tables):
             ids = set()
             for row in range(1, table.rowCount()):
-                item = table.item(row, 0)
+                item = table.item(row, ID_COLUMN)
                 text = item.text()
                 if text in ids:
                     status = DATA_UNIQUE_ERROR
+                    update_first_incorrect_cell(i, row, ID_COLUMN)
                     self.item_change_color(item, table, RED, do_reconnect=False)
                 ids.add(text)
 
-        caller_ids = [self.table_callers.item(row, 0).text() for row in range(1, self.table_callers.rowCount())]
-        city_ids = [self.table_cities.item(row, 0).text() for row in range(1, self.table_cities.rowCount())]
+        caller_ids = [self.table_callers.item(row, ID_COLUMN).text() for row in range(1, self.table_callers.rowCount())]
+        city_ids = [self.table_cities.item(row, ID_COLUMN).text() for row in range(1, self.table_cities.rowCount())]
         for row in range(1, self.table_conversations.rowCount()):
-            caller_item = self.table_conversations.item(row, 1)
-            city_item = self.table_conversations.item(row, 2)
+            caller_item = self.table_conversations.item(row, CALLER_ID_COLUMN)
+            city_item = self.table_conversations.item(row, CITY_ID_COLUMN)
             if caller_item.text() not in caller_ids:
                 status = DATA_ID_ERROR
+                update_first_incorrect_cell(TABLE_CONVERSATIONS_I, row, CALLER_ID_COLUMN)
                 self.item_change_color(caller_item, self.table_conversations, RED, do_reconnect=False)
             if city_item.text() not in city_ids:
                 status = DATA_ID_ERROR
+                update_first_incorrect_cell(TABLE_CONVERSATIONS_I, row, CITY_ID_COLUMN)
                 self.item_change_color(city_item, self.table_conversations, RED, do_reconnect=False)
 
         for table in self.tables:
             table.itemChanged.connect(self.check_table_value)
-            table.itemChanged.connect(table.resizeColumnsToContents)
+
+        if first_incorrect_cell != (-1, -1, -1):
+            i, row, col = first_incorrect_cell
+            self.tab_widget.setCurrentIndex(i)
+            table = self.current_table
+            table.scrollToItem(table.item(row, col))
+
         return status
+
+    def insert_into_table(self, row):
+        table = self.current_table
+        default_values = DEFAULT_TABLE_VALUES[self.tables.index(table)]
+        try:
+            next_id = max(int(table.item(row, 0).text()) for row in range(1, table.rowCount())) + 1
+        except ValueError:
+            next_id = default_values[0]
+        default_values[0] = str(next_id)
+        table.insertRow(row)
+        for col in range(table.columnCount()):
+            table.setItem(row, col, QTableWidgetItem(default_values[col]))
 
     def action_on_insert(self):
         row = max(self.current_table.currentRow(), 1)
-        self.current_table.insertRow(row)
-        for col in range(self.current_table.columnCount()):
-            self.current_table.setItem(row, col, QTableWidgetItem())
+        self.insert_into_table(row)
 
     def action_on_add(self):
         row = self.current_table.rowCount()
-        self.current_table.insertRow(row)
-        for col in range(self.current_table.columnCount()):
-            self.current_table.setItem(row, col, QTableWidgetItem())
+        self.insert_into_table(row)
 
     def action_on_delete(self):
         row = self.current_table.currentRow()
@@ -230,63 +250,40 @@ class MainWindow(MainWindowUi, QMainWindow):
     def current_tab_changed(self, index):
         self.current_table = self.tables[index]
 
-    def check_table_value(self, item, table=None, do_reconnect=True):
+    def check_table_value(self, item, table=None, do_reconnect=True, check_unique=True, check_foreign_key=True):
+        if item.row() == 0:
+            return
+
         text = item.text()
         col = item.column()
         if table is None:
             table = self.sender()
-        if table is self.table_callers:
-            digit_count = {
-                0: None,
-                1: 11,
-                2: 12,
-            }
-            str_length = {
-                3: 3
-            }
-            if col in digit_count.keys() and not check_int(text, digit_count.get(col)) or \
-                    col == 1 and text[:1] != '8' or \
-                    col in str_length.keys() and not check_str(text, str_length.get(col)):
+
+        reg_exp = TABLE_REG_EXPRESSIONS[self.tables.index(table)][col]
+
+        if not reg_exp.exactMatch(text):
+            self.item_change_color(item, table, RED, do_reconnect)
+            return False
+
+        if check_unique and col == ID_COLUMN and \
+                [table.item(row, col).text() for row in range(1, table.rowCount())].count(text) > 1:
+            self.item_change_color(item, table, RED, do_reconnect)
+            return False
+
+        if check_foreign_key and table == self.table_conversations and col in (CALLER_ID_COLUMN, CITY_ID_COLUMN):
+            if col == CALLER_ID_COLUMN:
+                linked_table = self.table_callers
+            elif col == CITY_ID_COLUMN:
+                linked_table = self.table_cities
+            else:
+                linked_table = None
+            ids = [linked_table.item(row, ID_COLUMN).text() for row in range(1, linked_table.rowCount())]
+            if text not in ids:
                 self.item_change_color(item, table, RED, do_reconnect)
                 return False
-            else:
-                self.item_change_color(item, table, WHITE, do_reconnect)
-                return True
-        elif table is self.table_cities:
-            digit_count = {
-                0: None,
-                2: None,
-                3: None,
-            }
-            str_length = {
-                1: 3
-            }
-            if col in digit_count.keys() and not check_int(text, digit_count.get(col)) or \
-                    col in str_length.keys() and not check_str(text, str_length.get(col)):
-                self.item_change_color(item, table, RED, do_reconnect)
-                return False
-            else:
-                self.item_change_color(item, table, WHITE, do_reconnect)
-                return True
-        elif table is self.table_conversations:
-            digit_count = {
-                0: None,
-                1: None,
-                2: None,
-                4: None,
-            }
-            str_length = {}
-            date_columns = (3,)
-            time_columns = (5,)
-            if col in digit_count.keys() and not check_int(text, digit_count.get(col)) or \
-                    col in date_columns and not check_date(text) or \
-                    col in time_columns and not check_time(text) or \
-                    col in str_length.keys() and not check_str(text, str_length.get(col)):
-                self.item_change_color(item, table, RED, do_reconnect)
-                return False
-            else:
-                self.item_change_color(item, table, WHITE, do_reconnect)
-                return True
+
+        self.item_change_color(item, table, WHITE, do_reconnect)
+        return True
 
     def item_change_color(self, item, table, color, do_reconnect):
         if do_reconnect:
@@ -296,21 +293,13 @@ class MainWindow(MainWindowUi, QMainWindow):
             table.itemChanged.connect(self.check_table_value)
 
 
-class Header(QWidget, HeaderUi):
-    def __init__(self, parent, name):
-        super().__init__(parent)
-        self.setupUi(self)
-
-        self.header_name.setText(name)
-
-
 class SearchDialog(QDialog, SearchWindowUi):
     def __init__(self, parent, table):
         super().__init__(parent)
         self.setupUi(self)
 
         data = [get_table_headers(table)] + get_table_data(table)
-        fill_table_with_data(self, self.table, data)
+        fill_table_with_data(self.table, data)
         self.column_count = table.columnCount()
 
         self.search.setColumnCount(self.column_count)
@@ -326,44 +315,46 @@ class SearchDialog(QDialog, SearchWindowUi):
         self.search.cellChanged.connect(self.update_table)
 
     def update_table(self):
-        filters = [f'*{text}*' if (text := self.search.item(0, col).text()) else '*'
-                   for col in range(self.column_count)]
+        filters = [self.search.item(0, col).text() for col in range(self.column_count)]
 
         data = [get_table_headers(self.data_table)]
         for row in range(1, self.data_table.rowCount()):
             row_data = [self.data_table.item(row, col).text() for col in range(self.column_count)]
-            if all(fnmatch(text, pattern) for text, pattern in zip(row_data, filters)):
+            if all(string in text for text, string in zip(row_data, filters)):
                 data.append(row_data)
 
-        fill_table_with_data(self, self.table, data, resize_table=False)
+        fill_table_with_data(self.table, data)
 
     def edit_table(self, row, col):
         if col == 0:
             return
 
-        item_id = self.table.item(row, 0).text()
+        item_id = self.table.item(row, ID_COLUMN).text()
         item = self.table.item(row, col)
         text = item.text()
 
         for row in range(1, self.data_table.rowCount()):
-            if self.data_table.item(row, 0).text() == item_id:
+            if self.data_table.item(row, ID_COLUMN).text() == item_id:
                 self.data_table.item(row, col).setText(text)
 
 
-def fill_table_with_data(parent, table, data, resize_table=True):
+def fill_table_with_data(table, data):
     table.clear()
     rows, cols = len(data), len(data[0])
     table.setRowCount(rows)
     table.setColumnCount(cols)
+    font = QFont()
+    font.setBold(True)
+
     for row in range(rows):
         for col in range(cols):
             if row == 0:
-                table.setCellWidget(row, col, Header(parent, str(data[row][col])))
+                item = QTableWidgetItem(str(data[row][col]))
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFont(font)
+                table.setItem(row, col, item)
             else:
                 table.setItem(row, col, QTableWidgetItem(str(data[row][col])))
-    if resize_table:
-        table.resizeColumnsToContents()
-        table.resizeRowToContents(0)
 
 
 def get_table_data(table):
@@ -371,34 +362,7 @@ def get_table_data(table):
 
 
 def get_table_headers(table):
-    return [table.cellWidget(0, col).header_name.text() for col in range(table.columnCount())]
-
-
-def check_int(s, digit_count=None):
-    if digit_count is None:
-        return s.isdigit()
-    return len(s) == digit_count and s.isdigit()
-
-
-def check_str(s, min_length=None):
-    if min_length is None:
-        return True
-    return len(s) >= min_length
-
-
-def check_time(s):
-    if not (len(s) == 5 and s[2:3] == ':' and
-            s[:2].isdigit() and s[3:].isdigit()):
-        return False
-    return 0 <= int(s[:2]) <= 23 and 0 <= int(s[3:]) <= 59
-
-
-def check_date(s):
-    if not (len(s) == 10 and s[2:3] == '.' and s[5:6] == '.' and
-            s[:2].isdigit() and s[3:5].isdigit() and s[6:].isdigit()):
-        return False
-    days_in_months = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    return 1 <= int(s[3:5]) <= 12 and 1 <= int(s[:2]) <= days_in_months[int(s[3:5])] and 0 <= int(s[6:]) <= 9999
+    return [table.item(0, col).text() for col in range(table.columnCount())]
 
 
 def except_hook(cls, exception, traceback):

@@ -7,7 +7,7 @@ import os
 
 city_count = 100
 caller_count = 1_000
-conversation_count = 10_000
+conversation_count = 1_000
 
 with open('cities.txt', encoding='utf-8') as file:
     cities = sorted(map(str.strip, file.readlines()))
@@ -75,7 +75,7 @@ datas = [
       randint(1, city_count),
       f'{randint(1, 28):02}.{randint(1, 12):02}.{randint(2000, 2024)}',
       randint(1, 3 * 60),
-      f'{randint(0, 23):02}:{randint(0, 59):02}']
+      choice(('день', 'ночь'))]
      for _ in range(conversation_count)],
 ]
 for command, data in zip(commands, datas):
