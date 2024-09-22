@@ -23,6 +23,7 @@ class Ui_Dialog(object):
         self.search.setObjectName("search")
         self.search.setColumnCount(0)
         self.search.horizontalHeader().setVisible(False)
+        self.search.horizontalHeader().setDefaultSectionSize(125)
         self.search.verticalHeader().setVisible(False)
         self.verticalLayout.addWidget(self.search)
         self.table = QtWidgets.QTableWidget(Dialog)
@@ -30,6 +31,7 @@ class Ui_Dialog(object):
         self.table.setColumnCount(0)
         self.table.setRowCount(0)
         self.table.horizontalHeader().setVisible(False)
+        self.table.horizontalHeader().setDefaultSectionSize(125)
         self.table.verticalHeader().setVisible(False)
         self.verticalLayout.addWidget(self.table)
 

@@ -304,8 +304,6 @@ class SearchDialog(QDialog, SearchWindowUi):
 
         self.search.setColumnCount(self.column_count)
         for col in range(self.column_count):
-            width = self.table.columnWidth(col)
-            self.search.setColumnWidth(col, width)
             self.search.setItem(0, col, QTableWidgetItem())
 
         self.data_table = table
