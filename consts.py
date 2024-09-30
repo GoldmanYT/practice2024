@@ -49,7 +49,7 @@ DB_CREATE_REQUESTS = (
     '''CREATE TABLE IF NOT EXISTS callers (
             caller_id INTEGER PRIMARY KEY AUTOINCREMENT,
             phone_number INTEGER NOT NULL,
-            tin INTEGER NOT NULL,
+            tin TEXT NOT NULL,
             address TEXT NOT NULL
         )''',
     '''CREATE TABLE IF NOT EXISTS cities (

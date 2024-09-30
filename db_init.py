@@ -32,7 +32,7 @@ for command in DB_CREATE_REQUESTS + DB_DELETE_REQUESTS:
 datas = [
     [[item_id + 1,
       '89' + ''.join(str(randint(0, 9)) for _ in range(9)),
-      str(randint(1, 9)) + ''.join(str(randint(0, 9)) for _ in range(11)),
+      ''.join(str(randint(0, 9)) for _ in range(12)),
       choice(cities)]
      for item_id in range(caller_count)],
     [[item_id + 1, city, randint(1, 20), randint(1, 20)]
