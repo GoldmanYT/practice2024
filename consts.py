@@ -23,9 +23,14 @@ ERROR_MESSAGES = {
     OPERATION_ERROR: 'Ошибка: '
 }
 
-HEADERS_CALLERS = 'Код абонента', 'Номер телефона', 'ИНН', 'Адрес'
-HEADERS_CITIES = 'Код города', 'Название', 'Тариф дневной', 'Тариф ночной'
-HEADERS_CONVERSATIONS = 'Код переговоров', 'Код абонента', 'Код города', 'Дата', 'Количество минут', 'Время суток'
+WINDOW_TITLE = 'Учёт телефонных переговоров - '
+NO_NAME = 'Без имени.db'
+
+HEADERS = (
+    ('Код абонента', 'Номер телефона', 'ИНН', 'Адрес'),
+    ('Код города', 'Название', 'Тариф дневной', 'Тариф ночной'),
+    ('Код переговоров', 'Код абонента', 'Код города', 'Дата', 'Количество минут', 'Время суток')
+)
 
 DEFAULT_TABLE_VALUES = (
     ['1', '89000000000', '000000000000', 'Введите адрес'],
@@ -38,4 +43,47 @@ TABLE_REG_EXPRESSIONS = (
     tuple(QRegExp(reg_exp) for reg_exp in ('[0-9]{1,}', '.{3,}', '[0-9]{1,}', '[0-9]{1,}')),
     tuple(QRegExp(reg_exp) if reg_exp != 'DATE_CHECK' else DateCheck() for reg_exp in (
         '[0-9]{1,}', '[0-9]{1,}', '[0-9]{1,}', 'DATE_CHECK', '[0-9]{1,}', '(день|ночь)'))
+)
+
+DB_CREATE_REQUESTS = (
+    '''CREATE TABLE IF NOT EXISTS callers (
+            caller_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone_number INTEGER NOT NULL,
+            tin INTEGER NOT NULL,
+            address TEXT NOT NULL
+        )''',
+    '''CREATE TABLE IF NOT EXISTS cities (
+            city_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            day_rate INTEGER NOT NULL,
+            night_rate INTEGER NOT NULL
+        )''',
+    '''CREATE TABLE IF NOT EXISTS conversations (
+            conversation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            caller_id INTEGER NOT NULL,
+            city_id INTEGER NOT NULL,
+            date TEXT NOT NULL,
+            minute_number INTEGER NOT NULL,
+            time TEXT NOT NULL,
+            FOREIGN KEY (caller_id) REFERENCES callers(caller_id),
+            FOREIGN KEY (city_id) REFERENCES callers(city_id)
+        )''',
+)
+
+DB_DELETE_REQUESTS = (
+    'DELETE FROM callers',
+    'DELETE FROM cities',
+    'DELETE FROM conversations'
+)
+
+DB_INSERT_REQUESTS = (
+    '''INSERT INTO callers
+        (caller_id, phone_number, tin, address)
+        VALUES (?, ?, ?, ?)''',
+    '''INSERT INTO cities
+        (city_id, name, day_rate, night_rate)
+        VALUES (?, ?, ?, ?)''',
+    '''INSERT INTO conversations
+        (conversation_id, caller_id, city_id, date, minute_number, time)
+        VALUES (?, ?, ?, ?, ?, ?)'''
 )

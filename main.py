@@ -3,9 +3,8 @@ import sqlite3
 from consts import *
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox, QDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QMessageBox
 from main_window import Ui_MainWindow as MainWindowUi
-from search_window import Ui_Dialog as SearchWindowUi
 
 
 class MainWindow(MainWindowUi, QMainWindow):
@@ -18,29 +17,34 @@ class MainWindow(MainWindowUi, QMainWindow):
         self.action_open.triggered.connect(self.action_on_open)
         self.action_save.triggered.connect(self.action_on_save)
         self.action_exit.triggered.connect(self.close)
-        self.action_insert.triggered.connect(self.action_on_insert)
         self.action_add.triggered.connect(self.action_on_add)
         self.action_delete.triggered.connect(self.action_on_delete)
         self.action_search.triggered.connect(self.action_on_search)
 
-        self.tab_widget.currentChanged.connect(self.current_tab_changed)
-
         self.tables = [self.table_callers, self.table_cities, self.table_conversations]
-        for i, table in enumerate(self.tables):
+        self.searches = [self.search_callers, self.search_cities, self.search_conversations]
+        self.results = [self.result_callers, self.result_cities, self.result_conversations]
+
+        for table, search, result in zip(self.tables, self.searches, self.results):
             table.itemChanged.connect(self.check_table_value)
-        self.current_table = self.table_callers
+            search.cellChanged.connect(self.update_result)
+            result.cellChanged.connect(self.edit_table)
+
         self.file_saved = True
         self.file_created = False
 
         self.action_on_new()
+        self.action_on_search(self.action_search.isChecked())
 
     def action_on_new(self):
-        fill_table_with_data(self.table_callers, [HEADERS_CALLERS])
-        fill_table_with_data(self.table_cities, [HEADERS_CITIES])
-        fill_table_with_data(self.table_conversations, [HEADERS_CONVERSATIONS])
+        for table, headers in zip(self.tables, HEADERS):
+            fill_table_with_data(table, [headers])
 
-        caption = 'Без имени.db'
-        self.setWindowTitle(f'Учёт телефонных переговоров - {caption}')
+        caption = NO_NAME
+        self.setWindowTitle(f'{WINDOW_TITLE}{caption}')
+
+        self.action_on_search(False)
+        self.action_search.setChecked(False)
 
     def action_on_open(self):
         filename, _ = QFileDialog.getOpenFileName(self, 'Открыть', '.', 'Базы данных (*.db)')
@@ -51,28 +55,26 @@ class MainWindow(MainWindowUi, QMainWindow):
             table.itemChanged.disconnect(self.check_table_value)
 
         *_, caption = filename.split('/')
-        self.setWindowTitle(f'Учёт телефонных переговоров - {caption}')
+        self.setWindowTitle(f'{WINDOW_TITLE}{caption}')
 
         connection = sqlite3.connect(filename)
         cursor = connection.cursor()
 
-        data_callers = cursor.execute('SELECT * FROM callers').fetchall()
-        data_cities = cursor.execute('SELECT * FROM cities').fetchall()
-        data_conversations = cursor.execute('SELECT * FROM conversations').fetchall()
+        data_tables = [
+            cursor.execute('SELECT * FROM callers').fetchall(),
+            cursor.execute('SELECT * FROM cities').fetchall(),
+            cursor.execute('SELECT * FROM conversations').fetchall()
+        ]
 
         connection.close()
 
-        data_callers.insert(0, HEADERS_CALLERS)
-        fill_table_with_data(self.table_callers, data_callers)
-
-        data_cities.insert(0, HEADERS_CITIES)
-        fill_table_with_data(self.table_cities, data_cities)
-
-        data_conversations.insert(0, HEADERS_CONVERSATIONS)
-        fill_table_with_data(self.table_conversations, data_conversations)
-
-        for table in self.tables:
+        for data, headers, table in zip(data_tables, HEADERS, self.tables):
+            data.insert(0, headers)
+            fill_table_with_data(table, data)
             table.itemChanged.connect(self.check_table_value)
+
+        self.action_on_search(False)
+        self.action_search.setChecked(False)
 
     def action_on_save(self):
         filename, _ = QFileDialog.getSaveFileName(self, 'Сохранить', '', 'Базы данных (*.db)')
@@ -83,65 +85,25 @@ class MainWindow(MainWindowUi, QMainWindow):
 
         try:
             if status == DATA_CORRECT:
-                data_callers = [[self.table_callers.item(row, col).text()
-                                 for col in range(self.table_callers.columnCount())]
-                                for row in range(1, self.table_callers.rowCount())]
-
-                data_cities = [[self.table_cities.item(row, col).text()
-                                for col in range(self.table_cities.columnCount())]
-                               for row in range(1, self.table_cities.rowCount())]
-
-                data_conversations = [[self.table_conversations.item(row, col).text()
-                                       for col in range(self.table_conversations.columnCount())]
-                                      for row in range(1, self.table_conversations.rowCount())]
+                data_tables = [[[table.item(row, col).text()
+                                 for col in range(table.columnCount())]
+                                for row in range(1, table.rowCount())]
+                               for table in self.tables]
 
                 *_, caption = filename.split('/')
-                self.setWindowTitle(f'Учёт телефонных переговоров - {caption}')
+                self.setWindowTitle(f'{WINDOW_TITLE}{caption}')
 
                 connection = sqlite3.connect(filename)
                 cursor = connection.cursor()
 
-                cursor.execute('''CREATE TABLE IF NOT EXISTS callers (
-                                      caller_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                      phone_number INTEGER NOT NULL,
-                                      tin INTEGER NOT NULL,
-                                      address TEXT NOT NULL
-                                  )''')
-                cursor.execute('''CREATE TABLE IF NOT EXISTS cities (
-                                      city_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                      name TEXT NOT NULL,
-                                      day_rate INTEGER NOT NULL,
-                                      night_rate INTEGER NOT NULL
-                                  )''')
-                cursor.execute('''CREATE TABLE IF NOT EXISTS conversations (
-                                      conversation_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                      caller_id INTEGER NOT NULL,
-                                      city_id INTEGER NOT NULL,
-                                      date TEXT NOT NULL,
-                                      minute_number INTEGER NOT NULL,
-                                      time TEXT NOT NULL,
-                                      FOREIGN KEY (caller_id) REFERENCES callers(caller_id),
-                                      FOREIGN KEY (city_id) REFERENCES callers(city_id)
-                                  )''')
+                for request in DB_CREATE_REQUESTS:
+                    cursor.execute(request)
 
-                cursor.execute('DELETE FROM callers')
-                cursor.execute('DELETE FROM cities')
-                cursor.execute('DELETE FROM conversations')
+                for request in DB_DELETE_REQUESTS:
+                    cursor.execute(request)
 
-                sqlite_insert_query = '''INSERT INTO callers
-                                         (caller_id, phone_number, tin, address)
-                                         VALUES (?, ?, ?, ?);'''
-                cursor.executemany(sqlite_insert_query, data_callers)
-
-                sqlite_insert_query = '''INSERT INTO cities
-                                         (city_id, name, day_rate, night_rate)
-                                         VALUES (?, ?, ?, ?);'''
-                cursor.executemany(sqlite_insert_query, data_cities)
-
-                sqlite_insert_query = '''INSERT INTO conversations
-                                         (conversation_id, caller_id, city_id, date, minute_number, time)
-                                         VALUES (?, ?, ?, ?, ?, ?);'''
-                cursor.executemany(sqlite_insert_query, data_conversations)
+                for request, data in zip(DB_INSERT_REQUESTS, data_tables):
+                    cursor.executemany(request, data)
 
                 connection.commit()
                 connection.close()
@@ -152,6 +114,9 @@ class MainWindow(MainWindowUi, QMainWindow):
             message = ERROR_MESSAGES.get(status)
 
         self.show_message(message)
+
+        self.action_on_search(False)
+        self.action_search.setChecked(False)
 
     def show_message(self, message):
         message_box = QMessageBox(self)
@@ -207,48 +172,66 @@ class MainWindow(MainWindowUi, QMainWindow):
         if first_incorrect_cell != (-1, -1, -1):
             i, row, col = first_incorrect_cell
             self.tab_widget.setCurrentIndex(i)
-            table = self.current_table
+            table = self.tables[self.tab_widget.currentIndex()]
             table.scrollToItem(table.item(row, col))
 
         return status
 
-    def insert_into_table(self, row):
-        table = self.current_table
-        default_values = DEFAULT_TABLE_VALUES[self.tables.index(table)]
-        try:
-            next_id = max(int(table.item(row, 0).text()) for row in range(1, table.rowCount())) + 1
-        except ValueError:
-            next_id = default_values[0]
-        default_values[0] = str(next_id)
-        table.insertRow(row)
-        for col in range(table.columnCount()):
-            table.setItem(row, col, QTableWidgetItem(default_values[col]))
-
-    def action_on_insert(self):
-        row = max(self.current_table.currentRow(), 1)
-        self.insert_into_table(row)
-
     def action_on_add(self):
-        row = self.current_table.rowCount()
-        self.insert_into_table(row)
+        index = self.tab_widget.currentIndex()
+        if self.action_search.isChecked():
+            for table in (self.tables[index], self.results[index]):
+                row = table.rowCount()
+                insert_into_table(row, table, index)
+        else:
+            table = self.tables[index]
+            row = table.rowCount()
+            insert_into_table(row, table, index)
 
     def action_on_delete(self):
-        row = self.current_table.currentRow()
+        if self.action_search.isChecked():
+            table = self.results[self.tab_widget.currentIndex()]
+        else:
+            table = self.tables[self.tab_widget.currentIndex()]
+        row = table.currentRow()
+        item_id = table.item(row, ID_COLUMN).text()
         if row != 0:
-            self.current_table.removeRow(row)
+            table.removeRow(row)
+        if self.action_search.isChecked():
+            table = self.tables[self.tab_widget.currentIndex()]
+            for row in range(1, table.rowCount()):
+                if table.item(row, ID_COLUMN).text() == item_id:
+                    table.removeRow(row)
+                    break
 
-    def action_on_search(self):
+    def action_on_search(self, checked):
         status = self.check_for_errors()
 
-        if status == DATA_CORRECT:
-            dialog = SearchDialog(self, self.current_table)
-            dialog.exec()
+        if status == DATA_CORRECT or not checked:
+            if checked:
+                for table in self.tables:
+                    table.hide()
+                for table, search, result in zip(self.tables, self.searches, self.results):
+                    search.show()
+                    search.cellChanged.disconnect(self.update_result)
+                    fill_table_with_data(search, [['' for _ in range(table.columnCount())]], with_headers=False)
+                    search.cellChanged.connect(self.update_result)
+
+                    result.cellChanged.disconnect(self.edit_table)
+                    result.show()
+                    data = [get_table_headers(table)] + get_table_data(table)
+                    fill_table_with_data(result, data)
+                    result.cellChanged.connect(self.edit_table)
+            else:
+                for table in self.tables:
+                    table.show()
+                for search, result in zip(self.searches, self.results):
+                    search.hide()
+                    result.hide()
         else:
+            self.action_search.setChecked(False)
             message = ERROR_MESSAGES.get(status)
             self.show_message(message)
-
-    def current_tab_changed(self, index):
-        self.current_table = self.tables[index]
 
     def check_table_value(self, item, table=None, do_reconnect=True, check_unique=True, check_foreign_key=True):
         if item.row() == 0:
@@ -292,51 +275,40 @@ class MainWindow(MainWindowUi, QMainWindow):
         if do_reconnect:
             table.itemChanged.connect(self.check_table_value)
 
+    def update_result(self, *_, search=None):
+        if search is None:
+            search = self.sender()
+        index = self.searches.index(search)
+        table = self.tables[index]
+        column_count = table.columnCount()
+        filters = [search.item(0, col).text() for col in range(column_count)]
 
-class SearchDialog(QDialog, SearchWindowUi):
-    def __init__(self, parent, table):
-        super().__init__(parent)
-        self.setupUi(self)
-
-        data = [get_table_headers(table)] + get_table_data(table)
-        fill_table_with_data(self.table, data)
-        self.column_count = table.columnCount()
-
-        self.search.setColumnCount(self.column_count)
-        for col in range(self.column_count):
-            self.search.setItem(0, col, QTableWidgetItem())
-
-        self.data_table = table
-        self.parent = parent
-
-        self.table.cellChanged.connect(self.edit_table)
-        self.search.cellChanged.connect(self.update_table)
-
-    def update_table(self):
-        filters = [self.search.item(0, col).text() for col in range(self.column_count)]
-
-        data = [get_table_headers(self.data_table)]
-        for row in range(1, self.data_table.rowCount()):
-            row_data = [self.data_table.item(row, col).text() for col in range(self.column_count)]
-            if all(string in text for text, string in zip(row_data, filters)):
+        data = [get_table_headers(table)]
+        for row in range(1, table.rowCount()):
+            row_data = [table.item(row, col).text() for col in range(column_count)]
+            if all(string.lower() in text.lower() for text, string in zip(row_data, filters)):
                 data.append(row_data)
 
-        fill_table_with_data(self.table, data)
+        fill_table_with_data(self.results[index], data)
 
-    def edit_table(self, row, col):
+    def edit_table(self, row, col, result=None):
         if col == 0:
             return
 
-        item_id = self.table.item(row, ID_COLUMN).text()
-        item = self.table.item(row, col)
+        if result is None:
+            result = self.sender()
+        index = self.results.index(result)
+        table = self.tables[index]
+        item_id = result.item(row, ID_COLUMN).text()
+        item = result.item(row, col)
         text = item.text()
 
-        for row in range(1, self.data_table.rowCount()):
-            if self.data_table.item(row, ID_COLUMN).text() == item_id:
-                self.data_table.item(row, col).setText(text)
+        for row in range(1, table.rowCount()):
+            if table.item(row, ID_COLUMN).text() == item_id:
+                table.item(row, col).setText(text)
 
 
-def fill_table_with_data(table, data):
+def fill_table_with_data(table, data, with_headers=True):
     table.clear()
     rows, cols = len(data), len(data[0])
     table.setRowCount(rows)
@@ -346,13 +318,25 @@ def fill_table_with_data(table, data):
 
     for row in range(rows):
         for col in range(cols):
-            if row == 0:
+            if row == 0 and with_headers:
                 item = QTableWidgetItem(str(data[row][col]))
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 item.setFont(font)
                 table.setItem(row, col, item)
             else:
                 table.setItem(row, col, QTableWidgetItem(str(data[row][col])))
+
+
+def insert_into_table(row, table, index):
+    default_values = DEFAULT_TABLE_VALUES[index]
+    try:
+        next_id = max(int(table.item(row, 0).text()) for row in range(1, table.rowCount())) + 1
+    except ValueError:
+        next_id = default_values[0]
+    default_values[0] = str(next_id)
+    table.insertRow(row)
+    for col in range(table.columnCount()):
+        table.setItem(row, col, QTableWidgetItem(default_values[col]))
 
 
 def get_table_data(table):

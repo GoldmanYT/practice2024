@@ -62,6 +62,42 @@
           </attribute>
          </widget>
         </item>
+        <item>
+         <widget class="QTableWidget" name="search_callers">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="rowCount">
+           <number>1</number>
+          </property>
+          <attribute name="horizontalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <attribute name="horizontalHeaderDefaultSectionSize">
+           <number>125</number>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <row/>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="result_callers">
+          <attribute name="horizontalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <attribute name="horizontalHeaderDefaultSectionSize">
+           <number>125</number>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+         </widget>
+        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="tab_cities">
@@ -83,6 +119,42 @@
         </property>
         <item>
          <widget class="QTableWidget" name="table_cities">
+          <attribute name="horizontalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <attribute name="horizontalHeaderDefaultSectionSize">
+           <number>125</number>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="search_cities">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="rowCount">
+           <number>1</number>
+          </property>
+          <attribute name="horizontalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <attribute name="horizontalHeaderDefaultSectionSize">
+           <number>125</number>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <row/>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="result_cities">
           <attribute name="horizontalHeaderVisible">
            <bool>false</bool>
           </attribute>
@@ -126,6 +198,42 @@
           </attribute>
          </widget>
         </item>
+        <item>
+         <widget class="QTableWidget" name="search_conversations">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="rowCount">
+           <number>1</number>
+          </property>
+          <attribute name="horizontalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <attribute name="horizontalHeaderDefaultSectionSize">
+           <number>125</number>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <row/>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="result_conversations">
+          <attribute name="horizontalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <attribute name="horizontalHeaderDefaultSectionSize">
+           <number>125</number>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+         </widget>
+        </item>
        </layout>
       </widget>
      </widget>
@@ -156,7 +264,6 @@
     <property name="title">
      <string>Правка</string>
     </property>
-    <addaction name="action_insert"/>
     <addaction name="action_add"/>
     <addaction name="action_delete"/>
     <addaction name="separator"/>
@@ -206,6 +313,9 @@
    </property>
   </action>
   <action name="action_search">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Искать в таблице</string>
    </property>
