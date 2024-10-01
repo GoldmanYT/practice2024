@@ -30,9 +30,6 @@ class MainWindow(MainWindowUi, QMainWindow):
             search.cellChanged.connect(self.update_result)
             result.cellChanged.connect(self.edit_table)
 
-        self.file_saved = True
-        self.file_created = False
-
         self.action_on_new()
         self.action_on_search(self.action_search.isChecked())
 
